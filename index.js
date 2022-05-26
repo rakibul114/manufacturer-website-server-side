@@ -1,7 +1,9 @@
 const express = require('express');
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
+require("dotenv").config();
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
-require('dotenv').config();
+
 const port = process.env.PORT || 5000;
 
 const app = express();
@@ -51,7 +53,7 @@ async function run() {
       const verifyAdmin = async (req, res, next) => {
         const requester = req.decoded.email;
         const requesterAccount = await userCollection.findOne({
-          email: requester,
+          email: requester
         });
         if (requesterAccount.role === "admin") {
           next();
@@ -111,7 +113,7 @@ async function run() {
         );
         res.send({ result, token });
       });
-      
+
 
       // Get all tools data
       app.get("/tool", async (req, res) => {
