@@ -73,6 +73,8 @@ async function run() {
         const isAdmin = user.role === "admin";
         res.send({ admin: isAdmin });
       });
+
+
       
 
       // Get all tools data
