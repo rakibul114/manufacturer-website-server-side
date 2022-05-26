@@ -92,7 +92,7 @@ async function run() {
         }
       );
 
-      // update a new registered user
+      // update or add a new registered user
       app.put("/user/:email", async (req, res) => {
         const email = req.params.email;
         const user = req.body;
@@ -106,11 +106,11 @@ async function run() {
           updateDoc,
           options
         );
-        const token = jwt.sign(
-          { email: email },
-          process.env.ACCESS_TOKEN_SECRET,
-          { expiresIn: "1h" }
-        );
+        // const token = jwt.sign(
+        //   { email: email },
+        //   process.env.ACCESS_TOKEN_SECRET,
+        //   { expiresIn: "1h" }
+        // );
         res.send({ result, token });
       });
 
