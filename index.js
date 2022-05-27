@@ -13,7 +13,7 @@ app.use(cors());
 app.use(express());
 
 
-// MongoDB connection
+
 
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.6rxra.mongodb.net/?retryWrites=true&w=majority`;
@@ -43,6 +43,7 @@ function verifyJWT(req, res, next) {
 async function run() {
     try {
       await client.connect();
+      // MongoDB connection
       const toolCollection = client.db("toolsManufacturer").collection("tool");
       const orderCollection = client
         .db("toolsManufacturer")
@@ -52,8 +53,10 @@ async function run() {
       // Get all tools data
       app.get("/tool", async (req, res) => {
         const query = {};
+        console.log(query);
         const cursor = toolCollection.find(query);
         const tools = await cursor.toArray();
+        console.log(tools);
         res.send(tools);
       });
 
@@ -129,6 +132,7 @@ async function run() {
         // );
         res.send({ result, token });
       });
+
 
       // Order Collection API
       app.post("/order", async (req, res) => {
