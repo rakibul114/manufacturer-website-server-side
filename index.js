@@ -10,7 +10,7 @@ const app = express();
 
 // middleware
 app.use(cors());
-app.use(express());
+app.use(express.json());
 
 
 
@@ -53,10 +53,8 @@ async function run() {
       // Get all tools data
       app.get("/tool", async (req, res) => {
         const query = {};
-        console.log(query);
         const cursor = toolCollection.find(query);
         const tools = await cursor.toArray();
-        console.log(tools);
         res.send(tools);
       });
 
@@ -125,11 +123,11 @@ async function run() {
           updateDoc,
           options
         );
-        // const token = jwt.sign(
-        //   { email: email },
-        //   process.env.ACCESS_TOKEN_SECRET,
-        //   { expiresIn: "1h" }
-        // );
+        const token = jwt.sign(
+          { email: email },
+          process.env.ACCESS_TOKEN_SECRET,
+          { expiresIn: "1h" }
+        );
         res.send({ result, token });
       });
 
@@ -137,7 +135,6 @@ async function run() {
       // Order Collection API
       app.post("/order", async (req, res) => {
         const order = req.body;
-        console.log(order);
         const result = await orderCollection.insertOne(order);
         res.send(result);
       });
