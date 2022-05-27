@@ -49,11 +49,27 @@ async function run() {
         .collection("order");
       const userCollection = client.db("toolsManufacturer").collection("users");
 
+      // Get all tools data
+      app.get("/tool", async (req, res) => {
+        const query = {};
+        const cursor = toolCollection.find(query);
+        const tools = await cursor.toArray();
+        res.send(tools);
+      });
+
+      // Get single tool data
+      app.get("/tool/:id", async (req, res) => {
+        const id = req.params.id;
+        const query = { _id: ObjectId(id) };
+        const tool = await toolCollection.findOne(query);
+        res.send(tool);
+      });
+
       // Verify Admin
       const verifyAdmin = async (req, res, next) => {
         const requester = req.decoded.email;
         const requesterAccount = await userCollection.findOne({
-          email: requester
+          email: requester,
         });
         if (requesterAccount.role === "admin") {
           next();
@@ -112,23 +128,6 @@ async function run() {
         //   { expiresIn: "1h" }
         // );
         res.send({ result, token });
-      });
-
-
-      // Get all tools data
-      app.get("/tool", async (req, res) => {
-        const query = {};
-        const cursor = toolCollection.find(query);
-        const tools = await cursor.toArray();
-        res.send(tools);
-      });
-
-      // Get single tool data
-      app.get("/tool/:id", async (req, res) => {
-        const id = req.params.id;
-        const query = { _id: ObjectId(id) };
-        const tool = await toolCollection.findOne(query);
-        res.send(tool);
       });
 
       // Order Collection API
