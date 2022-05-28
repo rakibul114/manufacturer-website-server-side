@@ -51,6 +51,7 @@ async function run() {
         .db("toolsManufacturer")
         .collection("order");
       const userCollection = client.db("toolsManufacturer").collection("users");
+      const paymentCollection = client.db("toolsManufacturer").collection("payments");
 
       // Get all tools data
       app.get("/tool", async (req, res) => {
@@ -166,6 +167,22 @@ async function run() {
         const query = { _id: ObjectId(id) };
         const order = await orderCollection.findOne(query);
         res.send(order);
+      });
+
+      // update payment
+      app.patch('/booking/:id', verifyJWT, async (req, res) => {
+        const id = req.params.id;
+        const payment = req.body;
+        const filter = { _id: ObjectId(id) };
+        const updatedDoc = {
+          $set: {
+            paid: true,
+            transactionId: payment.transactionId
+          }
+        };
+        const updatedOrder = await orderCollection.updateOne(filter, updateDoc);
+        const result = await paymentCollection.insertOne(payment);
+        res.send(updatedDoc);
       });
 
 
