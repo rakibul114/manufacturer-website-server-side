@@ -3,6 +3,7 @@ const cors = require('cors');
 const jwt = require('jsonwebtoken');
 require("dotenv").config();
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 const port = process.env.PORT || 5000;
 
@@ -11,8 +12,6 @@ const app = express();
 // middleware
 app.use(cors());
 app.use(express.json());
-
-
 
 
 
@@ -66,7 +65,7 @@ async function run() {
         res.send(tool);
       });
 
-      // Verify Admin
+      // function to Verify Admin
       const verifyAdmin = async (req, res, next) => {
         const requester = req.decoded.email;
         const requesterAccount = await userCollection.findOne({
@@ -78,6 +77,20 @@ async function run() {
           res.status(403).send({ message: "forbidden" });
         }
       };
+
+      // Payment API
+      app.post("/create-payment-intent", verifyJWT, async (req, res) => {
+        const service = req.body;
+        const price = service.price;
+        const amount = price * 100;
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount: amount,
+          currency: "usd",
+          payment_method_types: ["card"],
+        });
+        res.send({ clientSecret: paymentIntent.client_secret });
+      });
+
 
       // get all users from database
       app.get("/user", verifyJWT, async (req, res) => {
@@ -95,11 +108,9 @@ async function run() {
 
       // to make an user admin
       app.put(
-        "/user/admin/:email",
-        verifyJWT,
-        verifyAdmin,
-        async (req, res) => {
+        "/user/admin/:email", verifyJWT, verifyAdmin, async (req, res) => {
           const email = req.params.email;
+          
           const filter = { email: email };
           const updateDoc = {
             $set: { role: "admin" },
@@ -133,11 +144,25 @@ async function run() {
 
       // Order Collection API
       // get order
-      app.get('/order', verifyJWT, async (req, res) => {
+      app.get('/order', verifyJWT,  async (req, res) => {
         const email = req.query.email;
-        const query = { email: email };
-        const orders = await orderCollection.find(query).toArray();
-        res.send(orders);
+        const decodedEmail = req.decoded.email;
+        if (email === decodedEmail) {
+          const query = { email: email };
+          const orders = await orderCollection.find(query).toArray();
+          res.send(orders);
+        }
+        else {
+          return res.status(403).send({ message: 'forbidden access' });
+        }
+      });
+
+      // get order by id
+      app.get("/order/:id", verifyJWT,  async (req, res) => {
+        const id = req.params.id;
+        const query = { _id: ObjectId(id) };
+        const order = await orderCollection.findOne(query);
+        res.send(order);
       });
 
 
@@ -147,6 +172,16 @@ async function run() {
         const result = await orderCollection.insertOne(order);
         res.send(result);
       });
+
+
+      // delete order
+      app.delete('/order/:id', async (req, res) => {
+        const id = req.params.id;
+        const query = { _id: ObjectId(id) };
+        const result = await orderCollection.deleteOne(query);
+        res.send(result);
+      });
+
     }
     finally {
         
