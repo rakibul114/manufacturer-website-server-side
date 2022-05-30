@@ -7,10 +7,11 @@ const stripe = require("stripe")(
   "sk_test_51L0dqOCPAFEm2DliblQumT5i0xxZJ1LyZstBikz9dgbH3CaFg53OAmgD9R8PCnQCKcgJkdno9sHSeFRJv1WJaoCF00Ro3NMCkW"
 );
 
+const app = express();
 
 const port = process.env.PORT || 5000;
 
-const app = express();
+
 
 // middleware
 app.use(cors());
@@ -51,12 +52,14 @@ async function run() {
         .db("toolsManufacturer")
         .collection("order");
       const userCollection = client.db("toolsManufacturer").collection("users");
-      const paymentCollection = client.db("toolsManufacturer").collection("payments");
+      const paymentCollection = client
+        .db("toolsManufacturer")
+        .collection("payments");
 
       // Get all tools data
       app.get("/tool", async (req, res) => {
         const query = {};
-        const cursor = toolCollection.find(query);
+        const cursor = toolCollection.find(query).project({name: 1});
         const tools = await cursor.toArray();
         res.send(tools);
       });
@@ -82,20 +85,6 @@ async function run() {
         }
       };
 
-      // Payment API
-      app.post("/create-payment-intent", verifyJWT, async (req, res) => {
-        const tool = req.body;
-        const price = tool.price;
-        const amount = price * 100;
-        const paymentIntent = await stripe.paymentIntents.create({
-          amount: amount,
-          currency: "usd",
-          payment_method_types: ["card"],
-        });
-        res.send({ clientSecret: paymentIntent.client_secret });
-      });
-
-
       // get all users from database
       app.get("/user", verifyJWT, async (req, res) => {
         const users = await userCollection.find().toArray();
@@ -112,9 +101,12 @@ async function run() {
 
       // to make an user admin
       app.put(
-        "/user/admin/:email", verifyJWT, verifyAdmin, async (req, res) => {
+        "/user/admin/:email",
+        verifyJWT,
+        verifyAdmin,
+        async (req, res) => {
           const email = req.params.email;
-          
+
           const filter = { email: email };
           const updateDoc = {
             $set: { role: "admin" },
@@ -148,29 +140,41 @@ async function run() {
 
       // Order Collection API
       // get order
-      app.get('/order', verifyJWT,  async (req, res) => {
+      app.get("/order", verifyJWT, async (req, res) => {
         const email = req.query.email;
         const decodedEmail = req.decoded.email;
         if (email === decodedEmail) {
           const query = { email: email };
           const orders = await orderCollection.find(query).toArray();
           res.send(orders);
-        }
-        else {
-          return res.status(403).send({ message: 'forbidden access' });
+        } else {
+          return res.status(403).send({ message: "forbidden access" });
         }
       });
 
       // get order by id
-      app.get("/order/:id", verifyJWT,  async (req, res) => {
+      app.get("/order/:id", verifyJWT, async (req, res) => {
         const id = req.params.id;
         const query = { _id: ObjectId(id) };
         const order = await orderCollection.findOne(query);
         res.send(order);
       });
 
+      // POST API for payment
+      app.post("/create-payment-intent", verifyJWT, async (req, res) => {
+        const tool = req.body;
+        const price = tool.price;
+        const amount = price * 100;
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount: amount,
+          currency: "usd",
+          payment_method_types: ["card"]
+        });
+        res.send({ clientSecret: paymentIntent.client_secret });
+      });
+
       // update payment
-      app.patch('/booking/:id', verifyJWT, async (req, res) => {
+      app.patch("/order/:id", verifyJWT, async (req, res) => {
         const id = req.params.id;
         const payment = req.body;
         const filter = { _id: ObjectId(id) };
@@ -178,14 +182,15 @@ async function run() {
           $set: {
             paid: true,
             transactionId: payment.transactionId
-          }
+          },
         };
-        const updatedOrder = await orderCollection.updateOne(filter, updateDoc);
         const result = await paymentCollection.insertOne(payment);
-        res.send(updatedDoc);
+        const updatedOrder = await orderCollection.updateOne(
+          filter,
+          updatedDoc
+        );
+        res.send(updatedOrder);
       });
-      
-
 
       // post order
       app.post("/order", async (req, res) => {
@@ -194,15 +199,13 @@ async function run() {
         res.send(result);
       });
 
-
       // delete order
-      app.delete('/order/:id', async (req, res) => {
+      app.delete("/order/:id", async (req, res) => {
         const id = req.params.id;
         const query = { _id: ObjectId(id) };
         const result = await orderCollection.deleteOne(query);
         res.send(result);
       });
-
     }
     finally {
         
