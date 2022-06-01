@@ -59,7 +59,7 @@ async function run() {
       // Get all tools data
       app.get("/tool", async (req, res) => {
         const query = {};
-        const cursor = toolCollection.find(query).project({name: 1});
+        const cursor = toolCollection.find(query);
         const tools = await cursor.toArray();
         res.send(tools);
       });
